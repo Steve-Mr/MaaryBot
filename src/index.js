@@ -2,9 +2,9 @@
  * https://github.com/cvzi/telegram-bot-cloudflare
  */
 
-const TOKEN = 'TOKEN:HERE' // Get it from @BotFather https://core.telegram.org/bots#6-botfather
+const TOKEN = ENV_BOT_TOKEN // Get it from @BotFather https://core.telegram.org/bots#6-botfather
 const WEBHOOK = '/endpoint'
-const SECRET = 'SOMERANDOMSTRINGS' // A-Z, a-z, 0-9, _ and -
+const SECRET = ENV_BOT_SECRET // A-Z, a-z, 0-9, _ and -
 
 const UA = 'Mozilla/5.0 (X11; Linux x86_64; rv:120.0) Gecko/20100101 Firefox/120.0'
 
@@ -62,13 +62,35 @@ async function onMessage (message) {
 
   const pattern_bv = /(?:https?:\/\/)?(?:www\.)?bilibili\.com\/video\/(BV[^\/?|\s]+)/;
   const pattern_b23 = /(?:https?:\/\/b23\.tv\/[^\s]+)/;
+  const pattern_bili2233 = /(?:https?:\/\/bili2233\.cn\/[^\s]+)/;
+  const pattern_bparam =  /[?&](t=([0-9.]+))|[?&](p=([0-9]+))/g;
+
   const pattern_x = /(?:https?:\/\/)?\bx\.com\/(\w+)\/status\/(\w+)/;
+  const pattern_insta = /(?:https?:\/\/)?\binstagram\.com\/([^\/]+)\/([^\/?]+)/;
+  const pattern_fx = /(?:https?:\/\/)?\bfxtwitter\.com\/(\w+)\/status\/(\w+)/;
+  const pattern_fx_alt = /(?:https?:\/\/)?\bfixupx\.com\/(\w+)\/status\/(\w+)/;
+  const pattern_vx = /(?:https?:\/\/)?\bvxtwitter\.com\/(\w+)\/status\/(\w+)/;
+  const pattern_twi = /(?:https?:\/\/)?\btwitter\.com\/(\w+)\/status\/(\w+)/;
+
+  let timeValue = null;
+  let pageValue = null;
+
+  // 检查是否存在 t 和 p 参数
+  const paramMatch = text.matchAll(pattern_bparam);
+  for (const match of paramMatch) {
+    if (match[2]) {
+      timeValue = match[2]; // t 参数值
+    }
+    if (match[4]) {
+      pageValue = match[4]; // p 参数值
+    }
+  }
 
   if (pattern_bv.test(text)) {
     // bv
     const match = text.match(pattern_bv);
     const bv = match[1]
-    const msgBody = await buildMessageBodyFromBV(bv)
+    const msgBody = await buildMessageBodyFromBV(bv, timeValue, pageValue)
     return sendTextReply(message.chat.id, message.message_id, msgBody)
   } else if (pattern_b23.test(text)) {
     // b23
@@ -76,7 +98,15 @@ async function onMessage (message) {
     const bvlink = await b23toav(match[0])
     const parts = bvlink.split('/');
     const bv = parts.pop() || parts.pop();
-    const msgBody = await buildMessageBodyFromBV(bv)
+    const msgBody = await buildMessageBodyFromBV(bv, timeValue, pageValue)
+    return sendTextReply(message.chat.id, message.message_id, msgBody)
+  } else if (pattern_bili2233.test(text)) {
+    // b23
+    const match = text.match(pattern_bili2233);
+    const bvlink = await b23toav(match[0])
+    const parts = bvlink.split('/');
+    const bv = parts.pop() || parts.pop();
+    const msgBody = await buildMessageBodyFromBV(bv, timeValue, pageValue)
     return sendTextReply(message.chat.id, message.message_id, msgBody)
   } else if (pattern_x.test(text)) {
     // x.com
@@ -84,21 +114,64 @@ async function onMessage (message) {
     //const url = text.replace('x.com', 'fxtwitter.com');
     const url = "https://fxtwitter.com/" + match[1] + "/status/" + match[2]
     return sendTextReply(message.chat.id, message.message_id, url)
+  } else if (pattern_twi.test(text)) {
+    // twitter.com
+    const match = text.match(pattern_twi);
+    const url = "https://fxtwitter.com/" + match[1] + "/status/" + match[2]
+    return sendTextReply(message.chat.id, message.message_id, url)
+  }  else if (pattern_fx.test(text)) {
+    // x.com
+    const match = text.match(pattern_fx);
+    //const url = text.replace('x.com', 'fxtwitter.com');
+    const url = "https://x.com/" + match[1] + "/status/" + match[2]
+    return sendTextReply(message.chat.id, message.message_id, url)
+  }  else if (pattern_fx_alt.test(text)) {
+    // x.com
+    const match = text.match(pattern_fx_alt);
+    //const url = text.replace('x.com', 'fxtwitter.com');
+    const url = "https://x.com/" + match[1] + "/status/" + match[2]
+    return sendTextReply(message.chat.id, message.message_id, url)
+  }  else if (pattern_vx.test(text)) {
+    // x.com
+    const match = text.match(pattern_vx);
+    //const url = text.replace('x.com', 'fxtwitter.com');
+    const url = "https://x.com/" + match[1] + "/status/" + match[2]
+    return sendTextReply(message.chat.id, message.message_id, url)
+  } else if (pattern_insta.test(text)) {
+    // instagram.com
+    const match = text.match(pattern_insta);
+    // const url = text.replace('instagram.com', 'ddinstagram.com');
+    const url = "https://ddinstagram.com/" + match[1] + "/" + match[2]
+    return sendTextReply(message.chat.id, message.message_id, url)
   }
 
   //return sendPlainText(message.chat.id, 'Echo:\n' + message.text)
   return null
 }
 
-async function buildMessageBodyFromBV(bv) {
-  const base_av = 'https://www.bilibili.com/video/av'
-  const title = await getInfoFromBV(bv)
+async function buildMessageBodyFromBV(bv, timeValue = null, pageValue = null) {
+  const base_av = 'https://www.bilibili.com/video/av';
+  const title = await getInfoFromBV(bv);
+  
+  let link = `${base_av}${bv2av(bv)}`;
+  
+  // 如果存在 t 或 p 参数，将它们附加到链接中
+  if (timeValue) {
+    link += `?t=${timeValue}`;
+  }
+  
+  if (pageValue) {
+    // 如果有 t 参数，p 需要用 & 连接，否则用 ?
+    link += timeValue ? `&p=${pageValue}` : `?p=${pageValue}`;
+  }
+
   if (title) {
-    return `${title}\n${base_av}${bv2av(bv)}`
+    return `${title}\n${link}`;
   } else {
-    return base_av + bv2av(bv)
+    return link;
   }
 }
+
 
 // https://socialsisteryi.github.io/bilibili-API-collect/docs/misc/bvid_desc.html#javascript-typescript
 function bv2av(bvid) {
@@ -213,3 +286,4 @@ function apiUrl (methodName, params = null) {
   }
   return `https://api.telegram.org/bot${TOKEN}/${methodName}${query}`
 }
+
