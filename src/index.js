@@ -2,9 +2,10 @@
  * https://github.com/cvzi/telegram-bot-cloudflare
  */
 
-const TOKEN = ENV_BOT_TOKEN
+let TOKEN;
+let SECRET;
+
 const WEBHOOK = '/endpoint'
-const SECRET = ENV_BOT_SECRET
 
 const UA = 'Mozilla/5.0 (X11; Linux x86_64; rv:120.0) Gecko/20100101 Firefox/120.0'
 
@@ -12,6 +13,10 @@ const UA = 'Mozilla/5.0 (X11; Linux x86_64; rv:120.0) Gecko/20100101 Firefox/120
  * Wait for requests to the worker
  */
 addEventListener('fetch', event => {
+  // 从 env 获取环境变量
+  TOKEN = event.env.ENV_BOT_TOKEN;
+  SECRET = event.env.ENV_BOT_SECRET;
+  
   const url = new URL(event.request.url)
   if (url.pathname === WEBHOOK) {
     event.respondWith(handleWebhook(event))
