@@ -106,3 +106,7 @@ compatibility_flags = ["nodejs_compat"]
 # [[vectorize]]
 # binding = "MY_INDEX"
 # index_name = "my-index"
+
+# wrangler.toml (wrangler v3.88.0^)
+[observability.logs]
+enabled = true

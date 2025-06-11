@@ -14,8 +14,8 @@ const UA = 'Mozilla/5.0 (X11; Linux x86_64; rv:120.0) Gecko/20100101 Firefox/120
  */
 addEventListener('fetch', event => {
   // 从 env 获取环境变量
-  TOKEN = event.env.ENV_BOT_TOKEN;
-  SECRET = event.env.ENV_BOT_SECRET;
+  TOKEN = ENV_BOT_TOKEN;
+  SECRET = ENV_BOT_SECRET;
   
   const url = new URL(event.request.url)
   if (url.pathname === WEBHOOK) {
